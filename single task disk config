@@ -1,0 +1,85 @@
+while [ ! -e /dev/xvdb ] || [ ! -e /dev/xvdc ] || [ ! -e /dev/xvdd ]; do
+    echo 'Waiting for additional block devices to become available...'
+    sleep 1
+done
+
+# Unmount devices if already mounted, ignore errors
+umount /dev/xvdb || true
+umount /dev/xvdc || true
+umount /dev/xvdd || true
+
+# Create physical volumes
+pvcreate /dev/xvdb -ff
+pvcreate /dev/xvdc -ff
+pvcreate /dev/xvdd -ff
+
+# Create volume groups
+vgcreate OS_vg /dev/xvdb
+vgcreate OPENV_vg /dev/xvdc
+vgcreate NESS_vg /dev/xvdd
+
+# Create logical volumes
+lvcreate -L 10G -n root_vol OS_vg
+lvcreate -L 8G -n swap_vol OS_vg
+lvcreate -L 6G -n var_vol OS_vg
+lvcreate -L 5G -n opt_vol OS_vg
+lvcreate -L 5G -n home_vol OS_vg
+lvcreate -L 3G -n plataforma_vol OS_vg
+lvcreate -L 3G -n var_log_vol OS_vg
+lvcreate -L 1G -n audit_vol OS_vg
+lvcreate -L 5G -n tmp_vol OS_vg
+lvcreate -L 8G -n crash_vol OS_vg
+lvcreate -L 10G -n openv_vol OPENV_vg
+lvcreate -L 3G -n nessus_vol NESS_vg
+
+# Format logical volumes with ext4 filesystem
+mkfs.ext4 /dev/OS_vg/root_vol
+mkswap /dev/OS_vg/swap_vol
+mkfs.ext4 /dev/OS_vg/var_vol
+mkfs.ext4 /dev/OS_vg/opt_vol
+mkfs.ext4 /dev/OS_vg/home_vol
+mkfs.ext4 /dev/OS_vg/plataforma_vol
+mkfs.ext4 /dev/OS_vg/var_log_vol
+mkfs.ext4 /dev/OS_vg/audit_vol
+mkfs.ext4 /dev/OS_vg/tmp_vol
+mkfs.ext4 /dev/OS_vg/crash_vol
+mkfs.ext4 /dev/OPENV_vg/openv_vol
+mkfs.ext4 /dev/NESS_vg/nessus_vol
+
+# Create directories with error handling
+mkdir_with_retry() {
+    dir_path="$1"
+    mkdir -p "$dir_path" || {
+        echo "Failed to create directory $dir_path. Retrying..."
+        sleep 1
+        mkdir_with_retry "$dir_path"
+    }
+}
+
+# Mount logical volumes
+mkdir_with_retry "/mnt/root"
+mkdir_with_retry "/mnt/var"
+mkdir_with_retry "/mnt/opt"
+mkdir_with_retry "/mnt/home"
+mkdir_with_retry "/mnt/root/plataforma_OYM"
+mkdir_with_retry "/mnt/var/log"
+mkdir_with_retry "/mnt/var/log/audit"
+mkdir_with_retry "/mnt/tmp"
+mkdir_with_retry "/mnt/var/crash"
+mkdir_with_retry "/mnt/usr/openv"
+mkdir_with_retry "/mnt/opt/nessus_agent"
+
+mount /dev/OS_vg/root_vol /mnt/root
+mount /dev/OS_vg/var_vol /mnt/var
+mount /dev/OS_vg/opt_vol /mnt/opt
+mount /dev/OS_vg/home_vol /mnt/home
+mount /dev/OS_vg/plataforma_vol /mnt/root/plataforma_OYM
+mount /dev/OS_vg/var_log_vol /mnt/var/log
+mount /dev/OS_vg/audit_vol /mnt/var/log/audit
+mount /dev/OS_vg/tmp_vol /mnt/tmp
+mount /dev/OS_vg/crash_vol /mnt/var/crash
+mount /dev/OPENV_vg/openv_vol /mnt/usr/openv
+mount /dev/NESS_vg/nessus_vol /mnt/opt/nessus_agent
+
+# Exit with success
+exit 0
