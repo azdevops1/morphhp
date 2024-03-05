@@ -1,0 +1,33 @@
+# Default swap size in GB
+DEFAULT_SWAP_SIZE=8
+
+# Check if swap is already configured
+if grep -q "swapfile" /etc/fstab; then
+    echo "Swap is already configured. Exiting."
+    exit 0
+fi
+
+# Determine swap size (default to 8GB if not provided)
+SWAP_SIZE=${1:-$DEFAULT_SWAP_SIZE}
+
+# Check if the logical volume already exists
+if lvdisplay | grep -q "swap_vol"; then
+    echo "Logical volume 'swap_vol' already exists. Skipping lvcreate."
+else
+    # Create a logical volume for swap
+    echo "Creating logical volume 'swap_vol' with size ${SWAP_SIZE}GB"
+    lvcreate -L ${SWAP_SIZE}G -n swap_vol OS_vg
+fi
+
+# Format the logical volume
+mkswap /dev/OS_vg/swap_vol
+
+# Enable swap on the logical volume
+swapon /dev/OS_vg/swap_vol
+
+# Enable swap at boot
+echo "/dev/OS_vg/swap_vol none swap sw 0 0" | tee -a /etc/fstab
+
+# Confirm swap configuration
+echo "Swap configuration completed."
+swapon --show
