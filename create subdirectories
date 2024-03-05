@@ -1,0 +1,19 @@
+cd /mnt/root
+mkdir /mnt/root/plataforma_OYM
+mount /dev/OS_vg/plataforma_vol /mnt/root/plataforma_OYM
+
+cd /mnt/var
+mkdir /mnt/var/log
+mount /dev/OS_vg/var_log_vol /mnt/var/log
+
+cd /mnt/var/log
+mkdir /mnt/var/log/audit
+mount /dev/OS_vg/audit_vol /mnt/var/log/audit
+
+cd /mnt/var
+mkdir /mnt/var/crash
+mount /dev/OS_vg/crash_vol /mnt/var/crash
+
+cd /mnt/opt
+mkdir /mnt/opt/nessus_agent
+mount /dev/NESS_vg/nessus_vol /mnt/opt/nessus_agent
